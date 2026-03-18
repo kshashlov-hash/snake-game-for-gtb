@@ -59,6 +59,7 @@
 
     <script>
         const tg = window.Telegram.WebApp;
+        tg.ready(); // Сообщаем Telegram, что приложение готово
         tg.expand();
         if (tg.headerColor) tg.setHeaderColor('#1a1a1a');
 
@@ -95,9 +96,30 @@
             if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
         }
 
+        function resetGame() {
+            snake.x = gridSize*2; snake.y = gridSize*2; 
+            snake.cells = []; snake.maxCells = 4;
+            snake.dx = gridSize; snake.dy = 0;
+            score = 0; scoreElement.innerText = score;
+        }
+
+        // Настройка главной кнопки Telegram
+        tg.MainButton.setText("Завершить игру");
+        tg.MainButton.show();
+        tg.MainButton.onClick(() => {
+            if (score > 0) {
+                tg.sendData(score.toString());
+            } else {
+                tg.close();
+            }
+        });
+
         function loop() {
             requestAnimationFrame(loop);
-            if (++count < 10) return; 
+            
+            // СКОРОСТЬ: Чем выше число, тем медленнее (10 - хороший баланс)
+            if (++count < 10) return;  
+            
             count = 0;
             ctx.clearRect(0,0,canvas.width,canvas.height);
 
@@ -112,9 +134,11 @@
             snake.cells.unshift({x: snake.x, y: snake.y});
             if (snake.cells.length > snake.maxCells) snake.cells.pop();
 
+            // Рисуем яблоко
             ctx.fillStyle = '#ff4d4d';
             ctx.fillRect(apple.x, apple.y, gridSize-1, gridSize-1);
 
+            // Рисуем змейку
             ctx.fillStyle = '#4CAF50';
             snake.cells.forEach(function(cell, index) {
                 ctx.fillRect(cell.x, cell.y, gridSize-1, gridSize-1);
@@ -131,20 +155,17 @@
                 // Проверка столкновения с собой
                 for (let i = index + 1; i < snake.cells.length; i++) {
                     if (cell.x === snake.cells[i].x && cell.y === snake.cells[i].y) {
-                        // Если набрали очки — отправляем боту и закрываем
                         if (score > 0) {
                             tg.sendData(score.toString());
                         }
-                        // Сброс игры
-                        snake.x = gridSize*2; snake.y = gridSize*2; 
-                        snake.cells = []; snake.maxCells = 4;
-                        snake.dx = gridSize; snake.dy = 0;
-                        score = 0; scoreElement.innerText = score;
+                        resetGame();
                         if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('error');
                     }
                 }
             });
         }
+
+        // Запуск игрового цикла
         requestAnimationFrame(loop);
     </script>
 </body>
