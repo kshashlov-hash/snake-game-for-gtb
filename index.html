@@ -7,72 +7,40 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         body { 
-            background: #1a1a1a; 
-            margin: 0; 
-            display: flex; 
-            flex-direction: column; 
-            align-items: center; 
-            justify-content: center; 
-            height: 100vh; 
-            color: white; 
-            font-family: sans-serif; 
-            overflow: hidden; 
+            background: #1a1a1a; margin: 0; 
+            display: flex; flex-direction: column; align-items: center; justify-content: center; 
+            height: 100vh; color: white; font-family: sans-serif; overflow: hidden; 
             touch-action: none; 
         }
-        .header-container {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            width: 90%;
-            margin-bottom: 10px;
+        .top-bar {
+            display: flex; justify-content: space-between; align-items: center;
+            width: 90%; margin-bottom: 15px; 
+            /* Важно: разрешаем события мыши здесь */
+            pointer-events: auto; 
         }
         .score { font-size: 22px; font-weight: bold; color: #4CAF50; }
-        
-        /* Кнопка теперь сверху и справа */
         .exit-btn {
-            padding: 8px 16px;
-            background: #ff4d4d;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-weight: bold;
-            font-size: 12px;
-            text-transform: uppercase;
-            z-index: 1000; /* Чтобы была поверх всего */
+            padding: 10px 20px; background: #ff4d4d; color: white;
+            border: none; border-radius: 10px; font-weight: bold;
+            /* Увеличим зону нажатия */
+            min-width: 100px;
+            touch-action: manipulation;
         }
-        .exit-btn:active { background: #cc0000; transform: scale(0.95); }
-
         canvas { border: 2px solid #333; background: #000; border-radius: 8px; }
-        
-        .controls { 
-            margin-top: 15px; 
-            display: grid; 
-            grid-template-areas: ". up ." "left down right"; 
-            gap: 10px; 
-        }
+        .controls { margin-top: 15px; display: grid; grid-template-areas: ". up ." "left down right"; gap: 10px; }
         .btn { 
-            width: 65px; 
-            height: 65px; 
-            background: #333; 
-            border: none; 
-            border-radius: 12px; 
-            color: white; 
-            font-size: 24px; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center;
+            width: 65px; height: 65px; background: #333; border: none; border-radius: 12px; 
+            color: white; font-size: 24px; display: flex; align-items: center; justify-content: center;
+            touch-action: manipulation;
         }
-        .btn:active { background: #4CAF50; transform: scale(0.95); }
-        .up { grid-area: up; }
-        .left { grid-area: left; }
-        .down { grid-area: down; }
-        .right { grid-area: right; }
+        .btn:active { background: #4CAF50; }
+        .up { grid-area: up; } .left { grid-area: left; } .down { grid-area: down; } .right { grid-area: right; }
     </style>
 </head>
 <body>
-    <div class="header-container">
+    <div class="top-bar">
         <div class="score">Score: <span id="scoreVal">0</span></div>
-        <button class="exit-btn" id="saveBtn">Завершить</button>
+        <button class="exit-btn" id="saveBtn">ЗАВЕРШИТЬ</button>
     </div>
 
     <canvas id="gameCanvas"></canvas>
@@ -88,7 +56,7 @@
         const tg = window.Telegram.WebApp;
         tg.ready();
         tg.expand();
-        
+
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
         const scoreElement = document.getElementById("scoreVal");
@@ -97,6 +65,8 @@
         const gridSize = 20;
         let count = 0;
         let score = 0;
+        let snake = { x: 160, y: 160, dx: gridSize, dy: 0, cells: [], maxCells: 4 };
+        let apple = { x: 320, y: 320 };
 
         function resizeCanvas() {
             const availableWidth = window.innerWidth - 30;
@@ -107,14 +77,10 @@
         window.addEventListener('resize', resizeCanvas);
         resizeCanvas();
 
-        let snake = { x: gridSize*2, y: gridSize*2, dx: gridSize, dy: 0, cells: [], maxCells: 4 };
-        let apple = { x: gridSize*5, y: gridSize*5 };
-
         function placeApple() {
             apple.x = Math.floor(Math.random() * (canvas.width / gridSize)) * gridSize;
             apple.y = Math.floor(Math.random() * (canvas.height / gridSize)) * gridSize;
         }
-        placeApple();
 
         function changeDir(dir) {
             if (dir === 'left' && snake.dx === 0) { snake.dx = -gridSize; snake.dy = 0; }
@@ -124,31 +90,35 @@
             if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
         }
 
-        // Исправленная функция завершения
+        // Функция завершения с принудительным закрытием
         function finishGame() {
             if (score > 0) {
+                // Пытаемся отправить данные
                 tg.sendData(score.toString());
+                // На всякий случай закрываем через небольшую паузу, если sendData не сработал мгновенно
+                setTimeout(() => { tg.close(); }, 100);
             } else {
                 tg.close();
             }
         }
 
-        // Обработка клика и касания для кнопки "Завершить"
-        saveBtn.addEventListener('click', finishGame);
-        saveBtn.addEventListener('touchstart', (e) => {
+        // Обработка кнопки
+        saveBtn.onclick = finishGame;
+        saveBtn.ontouchstart = (e) => {
             e.preventDefault();
             finishGame();
-        });
+        };
 
         function loop() {
             requestAnimationFrame(loop);
-            if (++count < 10) return;  
+            if (++count < 10) return;
             count = 0;
             ctx.clearRect(0,0,canvas.width,canvas.height);
 
             snake.x += snake.dx;
             snake.y += snake.dy;
 
+            // Сквозной проход через стены
             if (snake.x < 0) snake.x = canvas.width - gridSize;
             else if (snake.x >= canvas.width) snake.x = 0;
             if (snake.y < 0) snake.y = canvas.height - gridSize;
@@ -157,24 +127,29 @@
             snake.cells.unshift({x: snake.x, y: snake.y});
             if (snake.cells.length > snake.maxCells) snake.cells.pop();
 
+            // Рисуем яблоко
             ctx.fillStyle = '#ff4d4d';
             ctx.fillRect(apple.x, apple.y, gridSize-1, gridSize-1);
 
+            // Рисуем змейку
             ctx.fillStyle = '#4CAF50';
             snake.cells.forEach(function(cell, index) {
                 ctx.fillRect(cell.x, cell.y, gridSize-1, gridSize-1);
                 
+                // Проверка на яблоко
                 if (cell.x === apple.x && cell.y === apple.y) {
                     snake.maxCells++;
                     score++;
                     scoreElement.innerText = score;
                     placeApple();
-                    if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
                 }
 
+                // Проверка столкновения с собой (начиная со второго сегмента)
                 for (let i = index + 1; i < snake.cells.length; i++) {
                     if (cell.x === snake.cells[i].x && cell.y === snake.cells[i].y) {
-                        finishGame(); 
+                        // Вибрация при проигрыше
+                        if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('error');
+                        finishGame();
                     }
                 }
             });
