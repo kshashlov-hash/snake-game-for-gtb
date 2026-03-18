@@ -21,8 +21,6 @@
         }
         .score { font-size: 24px; margin-bottom: 10px; font-weight: bold; color: #4CAF50; }
         canvas { border: 2px solid #333; background: #000; border-radius: 8px; }
-        
-        /* Стили для кнопок управления */
         .controls { 
             margin-top: 20px; 
             display: grid; 
@@ -40,7 +38,6 @@
             display: flex; 
             align-items: center; 
             justify-content: center;
-            active: background: #555;
         }
         .btn:active { background: #4CAF50; transform: scale(0.95); }
         .up { grid-area: up; }
@@ -74,10 +71,11 @@
 
         function resizeCanvas() {
             const availableWidth = window.innerWidth - 30;
-            const availableHeight = window.innerHeight - 280; // Больше места под кнопки
+            const availableHeight = window.innerHeight - 280; 
             canvas.width = Math.floor(availableWidth / gridSize) * gridSize;
             canvas.height = Math.floor(availableHeight / gridSize) * gridSize;
         }
+        window.addEventListener('resize', resizeCanvas);
         resizeCanvas();
 
         let snake = { x: gridSize*2, y: gridSize*2, dx: gridSize, dy: 0, cells: [], maxCells: 4 };
@@ -120,6 +118,8 @@
             ctx.fillStyle = '#4CAF50';
             snake.cells.forEach(function(cell, index) {
                 ctx.fillRect(cell.x, cell.y, gridSize-1, gridSize-1);
+                
+                // Змейка съела яблоко
                 if (cell.x === apple.x && cell.y === apple.y) {
                     snake.maxCells++;
                     score++;
@@ -127,8 +127,15 @@
                     placeApple();
                     if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
                 }
+
+                // Проверка столкновения с собой
                 for (let i = index + 1; i < snake.cells.length; i++) {
                     if (cell.x === snake.cells[i].x && cell.y === snake.cells[i].y) {
+                        // Если набрали очки — отправляем боту и закрываем
+                        if (score > 0) {
+                            tg.sendData(score.toString());
+                        }
+                        // Сброс игры
                         snake.x = gridSize*2; snake.y = gridSize*2; 
                         snake.cells = []; snake.maxCells = 4;
                         snake.dx = gridSize; snake.dy = 0;
