@@ -22,14 +22,14 @@
         .score { font-size: 24px; margin-bottom: 10px; font-weight: bold; color: #4CAF50; }
         canvas { border: 2px solid #333; background: #000; border-radius: 8px; }
         .controls { 
-            margin-top: 20px; 
+            margin-top: 15px; 
             display: grid; 
             grid-template-areas: ". up ." "left down right"; 
-            gap: 10px; 
+            gap: 8px; 
         }
         .btn { 
-            width: 65px; 
-            height: 65px; 
+            width: 60px; 
+            height: 60px; 
             background: #333; 
             border: none; 
             border-radius: 12px; 
@@ -40,6 +40,22 @@
             justify-content: center;
         }
         .btn:active { background: #4CAF50; transform: scale(0.95); }
+        
+        /* Стиль для новой кнопки выхода */
+        .exit-btn {
+            margin-top: 15px;
+            padding: 12px 24px;
+            background: #ff4d4d;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-weight: bold;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .exit-btn:active { background: #cc0000; transform: scale(0.98); }
+
         .up { grid-area: up; }
         .left { grid-area: left; }
         .down { grid-area: down; }
@@ -57,23 +73,13 @@
         <button class="btn right" onclick="changeDir('right')">▶</button>
     </div>
 
+    <button class="exit-btn" onclick="finishGame()">Завершить игру</button>
+
     <script>
-        // --- 1. Инициализация Telegram SDK ---
         const tg = window.Telegram.WebApp;
         tg.ready();
         tg.expand();
-        if (tg.headerColor) tg.setHeaderColor('#1a1a1a');
-
-        // Настройка главной кнопки Telegram (MainButton)
-        tg.MainButton.setParams({
-            text: "ЗАВЕРШИТЬ И СОХРАНИТЬ",
-            color: "#4CAF50",
-            text_color: "#ffffff",
-            is_active: true,
-            is_visible: true
-        });
-        tg.MainButton.show();
-
+        
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
         const scoreElement = document.getElementById("scoreVal");
@@ -83,7 +89,7 @@
 
         function resizeCanvas() {
             const availableWidth = window.innerWidth - 30;
-            const availableHeight = window.innerHeight - 280; 
+            const availableHeight = window.innerHeight - 320; 
             canvas.width = Math.floor(availableWidth / gridSize) * gridSize;
             canvas.height = Math.floor(availableHeight / gridSize) * gridSize;
         }
@@ -107,31 +113,18 @@
             if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
         }
 
-        // Функция отправки счета и закрытия
-        const finishGame = () => {
+        // Глобальная функция выхода
+        function finishGame() {
             if (score > 0) {
                 tg.sendData(score.toString());
             } else {
                 tg.close();
             }
-        };
-
-        // Назначаем действие на кнопку Telegram
-        tg.MainButton.onClick(finishGame);
-
-        function resetGame() {
-            snake.x = gridSize*2; snake.y = gridSize*2; 
-            snake.cells = []; snake.maxCells = 4;
-            snake.dx = gridSize; snake.dy = 0;
-            score = 0; scoreElement.innerText = score;
         }
 
         function loop() {
             requestAnimationFrame(loop);
-            
-            // СКОРОСТЬ: 10 — это в 1.5 раза медленнее, чем было (7)
             if (++count < 10) return;  
-            
             count = 0;
             ctx.clearRect(0,0,canvas.width,canvas.height);
 
@@ -163,13 +156,11 @@
 
                 for (let i = index + 1; i < snake.cells.length; i++) {
                     if (cell.x === snake.cells[i].x && cell.y === snake.cells[i].y) {
-                        // При столкновении сразу отправляем результат боту
-                        finishGame();
+                        finishGame(); // При столкновении отправляем счет
                     }
                 }
             });
         }
-
         requestAnimationFrame(loop);
     </script>
 </body>
