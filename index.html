@@ -104,8 +104,17 @@
         }
 
         // Настройка главной кнопки Telegram
-        tg.MainButton.setText("Завершить игру");
+        tg.MainButton.setParams({
+            text: "ЗАВЕРШИТЬ И СОХРАНИТЬ",
+            color: "#4CAF50", // Сделаем её зеленой под цвет змейки
+            text_color: "#ffffff",
+            is_active: true,
+            is_visible: true
+        });
+
+        // Отдельно вызываем показ, на всякий случай
         tg.MainButton.show();
+
         tg.MainButton.onClick(() => {
             if (score > 0) {
                 tg.sendData(score.toString());
