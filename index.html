@@ -92,28 +92,31 @@
 
         // Функция завершения с принудительным закрытием
         function finishGame() {
-    // 1. Превращаем score в строку и убираем лишнее
-    const scoreToSend = String(score || 0).trim();
-
-    // 2. Логируем для отладки (можно увидеть через Inspect в браузере)
-    console.log("Отправка счета:", scoreToSend);
+    const scoreStr = String(score || 0).trim();
+    
+    // 1. Проверяем, где открыта игра (unsafe.chat_type)
+    // 'sender' - личка, 'group'/'supergroup' - чаты
+    const chatType = tg.initDataUnsafe.chat_type;
 
     if (score > 0) {
-        try {
-            // 3. Отправляем именно СТРОКУ
-            tg.sendData(scoreToSend);
-            
-            // 4. Даем задержку перед закрытием, чтобы пакет успел уйти
-            setTimeout(() => {
+        // Если мы в ЛИЧКЕ (sender) - используем sendData
+        if (chatType === 'sender') {
+            try {
+                tg.sendData(scoreStr);
+                setTimeout(() => { tg.close(); }, 100);
+            } catch (err) {
+                // Фоллбэк на случай непредвиденной ошибки
+                alert("Результат: " + scoreStr);
                 tg.close();
-            }, 300);
-        } catch (err) {
-            // Если в личке не сработает, покажет причину
-            alert("Ошибка отправки: " + err.message);
+            }
+        } 
+        // Если мы в ГРУППЕ или КАНАЛЕ
+        else {
+            alert("Игра окончена! Твой счёт: " + scoreStr + "\n\nЧтобы сохранить результат в таблицу лидеров, играй в личке бота.");
             tg.close();
         }
     } else {
-        // Если 0 очков, просто закрываем без вызова sendData
+        // Если 0 очков, просто закрываем
         tg.close();
     }
 }
