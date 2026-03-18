@@ -58,10 +58,21 @@
     </div>
 
     <script>
+        // --- 1. Инициализация Telegram SDK ---
         const tg = window.Telegram.WebApp;
-        tg.ready(); // Сообщаем Telegram, что приложение готово
+        tg.ready();
         tg.expand();
         if (tg.headerColor) tg.setHeaderColor('#1a1a1a');
+
+        // Настройка главной кнопки Telegram (MainButton)
+        tg.MainButton.setParams({
+            text: "ЗАВЕРШИТЬ И СОХРАНИТЬ",
+            color: "#4CAF50",
+            text_color: "#ffffff",
+            is_active: true,
+            is_visible: true
+        });
+        tg.MainButton.show();
 
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
@@ -96,6 +107,18 @@
             if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
         }
 
+        // Функция отправки счета и закрытия
+        const finishGame = () => {
+            if (score > 0) {
+                tg.sendData(score.toString());
+            } else {
+                tg.close();
+            }
+        };
+
+        // Назначаем действие на кнопку Telegram
+        tg.MainButton.onClick(finishGame);
+
         function resetGame() {
             snake.x = gridSize*2; snake.y = gridSize*2; 
             snake.cells = []; snake.maxCells = 4;
@@ -103,30 +126,10 @@
             score = 0; scoreElement.innerText = score;
         }
 
-        // Настройка главной кнопки Telegram
-        tg.MainButton.setParams({
-            text: "ЗАВЕРШИТЬ И СОХРАНИТЬ",
-            color: "#4CAF50", // Сделаем её зеленой под цвет змейки
-            text_color: "#ffffff",
-            is_active: true,
-            is_visible: true
-        });
-
-        // Отдельно вызываем показ, на всякий случай
-        tg.MainButton.show();
-
-        tg.MainButton.onClick(() => {
-            if (score > 0) {
-                tg.sendData(score.toString());
-            } else {
-                tg.close();
-            }
-        });
-
         function loop() {
             requestAnimationFrame(loop);
             
-            // СКОРОСТЬ: Чем выше число, тем медленнее (10 - хороший баланс)
+            // СКОРОСТЬ: 10 — это в 1.5 раза медленнее, чем было (7)
             if (++count < 10) return;  
             
             count = 0;
@@ -143,16 +146,13 @@
             snake.cells.unshift({x: snake.x, y: snake.y});
             if (snake.cells.length > snake.maxCells) snake.cells.pop();
 
-            // Рисуем яблоко
             ctx.fillStyle = '#ff4d4d';
             ctx.fillRect(apple.x, apple.y, gridSize-1, gridSize-1);
 
-            // Рисуем змейку
             ctx.fillStyle = '#4CAF50';
             snake.cells.forEach(function(cell, index) {
                 ctx.fillRect(cell.x, cell.y, gridSize-1, gridSize-1);
                 
-                // Змейка съела яблоко
                 if (cell.x === apple.x && cell.y === apple.y) {
                     snake.maxCells++;
                     score++;
@@ -161,20 +161,15 @@
                     if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
                 }
 
-                // Проверка столкновения с собой
                 for (let i = index + 1; i < snake.cells.length; i++) {
                     if (cell.x === snake.cells[i].x && cell.y === snake.cells[i].y) {
-                        if (score > 0) {
-                            tg.sendData(score.toString());
-                        }
-                        resetGame();
-                        if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('error');
+                        // При столкновении сразу отправляем результат боту
+                        finishGame();
                     }
                 }
             });
         }
 
-        // Запуск игрового цикла
         requestAnimationFrame(loop);
     </script>
 </body>
