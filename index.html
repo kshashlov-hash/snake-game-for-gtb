@@ -92,15 +92,15 @@
 
         // Функция завершения с принудительным закрытием
         function finishGame() {
-            if (score > 0) {
-                // Пытаемся отправить данные
-                tg.sendData(score.toString());
-                // На всякий случай закрываем через небольшую паузу, если sendData не сработал мгновенно
-                setTimeout(() => { tg.close(); }, 100);
-            } else {
-                tg.close();
-            }
-        }
+    if (score > 0) {
+        // Отправляем данные в Telegram
+        tg.sendData(score.toString());
+        // Даем Telegram 200мс на отправку и закрываем
+        setTimeout(() => { tg.close(); }, 200);
+    } else {
+        tg.close();
+    }
+}
 
         // Обработка кнопки
         saveBtn.onclick = finishGame;
