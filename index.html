@@ -1,51 +1,111 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Snake for Telegram</title>
+    <title>Snake Pro TMA</title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body { background: #1a1a1a; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; color: white; font-family: sans-serif; overflow: hidden; }
-        canvas { border: 2px solid #333; background: #000; touch-action: none; }
-        .score { position: absolute; top: 20px; font-size: 20px; }
+        body { 
+            background: #1a1a1a; 
+            margin: 0; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center; 
+            height: 100vh; 
+            color: white; 
+            font-family: sans-serif; 
+            overflow: hidden; 
+            touch-action: none; 
+        }
+        .score { font-size: 24px; margin-bottom: 10px; font-weight: bold; color: #4CAF50; }
+        canvas { border: 2px solid #333; background: #000; border-radius: 8px; }
+        
+        /* Стили для кнопок управления */
+        .controls { 
+            margin-top: 20px; 
+            display: grid; 
+            grid-template-areas: ". up ." "left down right"; 
+            gap: 10px; 
+        }
+        .btn { 
+            width: 65px; 
+            height: 65px; 
+            background: #333; 
+            border: none; 
+            border-radius: 12px; 
+            color: white; 
+            font-size: 24px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center;
+            active: background: #555;
+        }
+        .btn:active { background: #4CAF50; transform: scale(0.95); }
+        .up { grid-area: up; }
+        .left { grid-area: left; }
+        .down { grid-area: down; }
+        .right { grid-area: right; }
     </style>
 </head>
 <body>
-    <div class="score">Счет: <span id="scoreVal">0</span></div>
+    <div class="score">Score: <span id="scoreVal">0</span></div>
     <canvas id="gameCanvas"></canvas>
+
+    <div class="controls">
+        <button class="btn up" onclick="changeDir('up')">▲</button>
+        <button class="btn left" onclick="changeDir('left')">◀</button>
+        <button class="btn down" onclick="changeDir('down')">▼</button>
+        <button class="btn right" onclick="changeDir('right')">▶</button>
+    </div>
 
     <script>
         const tg = window.Telegram.WebApp;
-        tg.expand(); // Разворачиваем на все окно
+        tg.expand();
+        if (tg.headerColor) tg.setHeaderColor('#1a1a1a');
 
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
         const scoreElement = document.getElementById("scoreVal");
-
         const gridSize = 20;
         let count = 0;
         let score = 0;
-        
-        // Подгоняем размер под экран
-        canvas.width = Math.floor((window.innerWidth - 40) / gridSize) * gridSize;
-        canvas.height = Math.floor((window.innerHeight - 100) / gridSize) * gridSize;
 
-        let snake = { x: 160, y: 160, dx: gridSize, dy: 0, cells: [], maxCells: 4 };
-        let apple = { x: 320, y: 320 };
+        function resizeCanvas() {
+            const availableWidth = window.innerWidth - 30;
+            const availableHeight = window.innerHeight - 280; // Больше места под кнопки
+            canvas.width = Math.floor(availableWidth / gridSize) * gridSize;
+            canvas.height = Math.floor(availableHeight / gridSize) * gridSize;
+        }
+        resizeCanvas();
 
-        function getRandomInt(min, max) { return Math.floor(Math.random() * (max - min)) + min; }
+        let snake = { x: gridSize*2, y: gridSize*2, dx: gridSize, dy: 0, cells: [], maxCells: 4 };
+        let apple = { x: gridSize*5, y: gridSize*5 };
+
+        function placeApple() {
+            apple.x = Math.floor(Math.random() * (canvas.width / gridSize)) * gridSize;
+            apple.y = Math.floor(Math.random() * (canvas.height / gridSize)) * gridSize;
+        }
+        placeApple();
+
+        function changeDir(dir) {
+            if (dir === 'left' && snake.dx === 0) { snake.dx = -gridSize; snake.dy = 0; }
+            else if (dir === 'up' && snake.dy === 0) { snake.dy = -gridSize; snake.dx = 0; }
+            else if (dir === 'right' && snake.dx === 0) { snake.dx = gridSize; snake.dy = 0; }
+            else if (dir === 'down' && snake.dy === 0) { snake.dy = gridSize; snake.dx = 0; }
+            if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
+        }
 
         function loop() {
             requestAnimationFrame(loop);
-            if (++count < 6) return; // Скорость игры
+            if (++count < 7) return; 
             count = 0;
             ctx.clearRect(0,0,canvas.width,canvas.height);
 
             snake.x += snake.dx;
             snake.y += snake.dy;
 
-            // Стены (проход сквозь них)
             if (snake.x < 0) snake.x = canvas.width - gridSize;
             else if (snake.x >= canvas.width) snake.x = 0;
             if (snake.y < 0) snake.y = canvas.height - gridSize;
@@ -54,11 +114,9 @@
             snake.cells.unshift({x: snake.x, y: snake.y});
             if (snake.cells.length > snake.maxCells) snake.cells.pop();
 
-            // Рисуем яблоко
             ctx.fillStyle = '#ff4d4d';
             ctx.fillRect(apple.x, apple.y, gridSize-1, gridSize-1);
 
-            // Рисуем змейку
             ctx.fillStyle = '#4CAF50';
             snake.cells.forEach(function(cell, index) {
                 ctx.fillRect(cell.x, cell.y, gridSize-1, gridSize-1);
@@ -66,36 +124,20 @@
                     snake.maxCells++;
                     score++;
                     scoreElement.innerText = score;
-                    apple.x = getRandomInt(0, canvas.width / gridSize) * gridSize;
-                    apple.y = getRandomInt(0, canvas.height / gridSize) * gridSize;
-                    if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
+                    placeApple();
+                    if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
                 }
-                // Проверка столкновения с собой
                 for (let i = index + 1; i < snake.cells.length; i++) {
                     if (cell.x === snake.cells[i].x && cell.y === snake.cells[i].y) {
-                        snake.x = 160; snake.y = 160; snake.cells = [];
-                        snake.maxCells = 4; snake.dx = gridSize; snake.dy = 0;
+                        snake.x = gridSize*2; snake.y = gridSize*2; 
+                        snake.cells = []; snake.maxCells = 4;
+                        snake.dx = gridSize; snake.dy = 0;
                         score = 0; scoreElement.innerText = score;
+                        if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('error');
                     }
                 }
             });
         }
-
-        // Управление свайпами
-        let touchStartX = 0; let touchStartY = 0;
-        document.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; touchStartY = e.touches[0].clientY; });
-        document.addEventListener('touchend', e => {
-            let dx = e.changedTouches[0].clientX - touchStartX;
-            let dy = e.changedTouches[0].clientY - touchStartY;
-            if (Math.abs(dx) > Math.abs(dy)) {
-                if (dx > 0 && snake.dx === 0) { snake.dx = gridSize; snake.dy = 0; }
-                else if (dx < 0 && snake.dx === 0) { snake.dx = -gridSize; snake.dy = 0; }
-            } else {
-                if (dy > 0 && snake.dy === 0) { snake.dy = gridSize; snake.dx = 0; }
-                else if (dy < 0 && snake.dy === 0) { snake.dy = -gridSize; snake.dx = 0; }
-            }
-        });
-
         requestAnimationFrame(loop);
     </script>
 </body>
