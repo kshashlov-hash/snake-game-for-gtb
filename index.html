@@ -19,17 +19,40 @@
             overflow: hidden; 
             touch-action: none; 
         }
-        .score { font-size: 24px; margin-bottom: 10px; font-weight: bold; color: #4CAF50; }
+        .header-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 90%;
+            margin-bottom: 10px;
+        }
+        .score { font-size: 22px; font-weight: bold; color: #4CAF50; }
+        
+        /* Кнопка теперь сверху и справа */
+        .exit-btn {
+            padding: 8px 16px;
+            background: #ff4d4d;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 12px;
+            text-transform: uppercase;
+            z-index: 1000; /* Чтобы была поверх всего */
+        }
+        .exit-btn:active { background: #cc0000; transform: scale(0.95); }
+
         canvas { border: 2px solid #333; background: #000; border-radius: 8px; }
+        
         .controls { 
             margin-top: 15px; 
             display: grid; 
             grid-template-areas: ". up ." "left down right"; 
-            gap: 8px; 
+            gap: 10px; 
         }
         .btn { 
-            width: 60px; 
-            height: 60px; 
+            width: 65px; 
+            height: 65px; 
             background: #333; 
             border: none; 
             border-radius: 12px; 
@@ -40,22 +63,6 @@
             justify-content: center;
         }
         .btn:active { background: #4CAF50; transform: scale(0.95); }
-        
-        /* Стиль для новой кнопки выхода */
-        .exit-btn {
-            margin-top: 15px;
-            padding: 12px 24px;
-            background: #ff4d4d;
-            color: white;
-            border: none;
-            border-radius: 10px;
-            font-weight: bold;
-            font-size: 14px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-        .exit-btn:active { background: #cc0000; transform: scale(0.98); }
-
         .up { grid-area: up; }
         .left { grid-area: left; }
         .down { grid-area: down; }
@@ -63,7 +70,11 @@
     </style>
 </head>
 <body>
-    <div class="score">Score: <span id="scoreVal">0</span></div>
+    <div class="header-container">
+        <div class="score">Score: <span id="scoreVal">0</span></div>
+        <button class="exit-btn" id="saveBtn">Завершить</button>
+    </div>
+
     <canvas id="gameCanvas"></canvas>
 
     <div class="controls">
@@ -73,8 +84,6 @@
         <button class="btn right" onclick="changeDir('right')">▶</button>
     </div>
 
-    <button class="exit-btn" onclick="finishGame()">Завершить игру</button>
-
     <script>
         const tg = window.Telegram.WebApp;
         tg.ready();
@@ -83,13 +92,15 @@
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
         const scoreElement = document.getElementById("scoreVal");
+        const saveBtn = document.getElementById("saveBtn");
+        
         const gridSize = 20;
         let count = 0;
         let score = 0;
 
         function resizeCanvas() {
             const availableWidth = window.innerWidth - 30;
-            const availableHeight = window.innerHeight - 320; 
+            const availableHeight = window.innerHeight - 300; 
             canvas.width = Math.floor(availableWidth / gridSize) * gridSize;
             canvas.height = Math.floor(availableHeight / gridSize) * gridSize;
         }
@@ -113,7 +124,7 @@
             if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
         }
 
-        // Глобальная функция выхода
+        // Исправленная функция завершения
         function finishGame() {
             if (score > 0) {
                 tg.sendData(score.toString());
@@ -121,6 +132,13 @@
                 tg.close();
             }
         }
+
+        // Обработка клика и касания для кнопки "Завершить"
+        saveBtn.addEventListener('click', finishGame);
+        saveBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            finishGame();
+        });
 
         function loop() {
             requestAnimationFrame(loop);
@@ -156,7 +174,7 @@
 
                 for (let i = index + 1; i < snake.cells.length; i++) {
                     if (cell.x === snake.cells[i].x && cell.y === snake.cells[i].y) {
-                        finishGame(); // При столкновении отправляем счет
+                        finishGame(); 
                     }
                 }
             });
