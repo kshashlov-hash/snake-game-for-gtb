@@ -92,11 +92,23 @@
 
         // Функция завершения с принудительным закрытием
         function finishGame() {
+    // Превращаем счет в строку явно
+    const finalScore = String(score || 0);
+
     if (score > 0) {
-        // Отправляем данные в Telegram
-        tg.sendData(score.toString());
-        // Даем Telegram 200мс на отправку и закрываем
-        setTimeout(() => { tg.close(); }, 200);
+        try {
+            // Сама отправка данных
+            tg.sendData(finalScore);
+            
+            // Если через 200мс мы все еще здесь — закрываем принудительно
+            setTimeout(() => {
+                tg.close();
+            }, 200);
+        } catch (err) {
+            // Если случилась ошибка API, мы ее увидим
+            alert("Ошибка отправки: " + err.message);
+            tg.close();
+        }
     } else {
         tg.close();
     }
