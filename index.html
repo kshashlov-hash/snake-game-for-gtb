@@ -6,32 +6,49 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body { 
-            background: #1a1a1a; margin: 0; 
-            display: flex; flex-direction: column; align-items: center; justify-content: center; 
-            height: 100vh; color: white; font-family: sans-serif; overflow: hidden; 
-            touch-action: none; 
+        * { box-sizing: border-box; }
+        
+        html, body {
+            background: #1a1a1a; margin: 0; padding: 0;
+            display: flex; flex-direction: column; 
+            height: 100vh; color: white; font-family: sans-serif; 
+            overflow: hidden; touch-action: none;
         }
+
         .top-bar {
             display: flex; justify-content: space-between; align-items: center;
-            width: 90%; margin-bottom: 15px; 
-            /* Важно: разрешаем события мыши здесь */
-            pointer-events: auto; 
+            width: 100%; height: 50px; 
+            padding: 0 15px; background: #222; 
+            pointer-events: auto; flex-shrink: 0;
         }
-        .score { font-size: 22px; font-weight: bold; color: #4CAF50; }
+        .score { font-size: 20px; font-weight: bold; color: #4CAF50; }
         .exit-btn {
-            padding: 10px 20px; background: #ff4d4d; color: white;
-            border: none; border-radius: 10px; font-weight: bold;
-            /* Увеличим зону нажатия */
-            min-width: 100px;
+            padding: 6px 15px; background: #ff4d4d; color: white;
+            border: none; border-radius: 6px; font-weight: bold;
+            min-width: 80px; font-size: 14px;
             touch-action: manipulation;
         }
-        canvas { border: 2px solid #333; background: #000; border-radius: 8px; }
-        .controls { margin-top: 15px; display: grid; grid-template-areas: ". up ." "left down right"; gap: 10px; }
+
+        #game-wrapper {
+            flex: 1; 
+            display: flex; justify-content: center; align-items: center;
+            overflow: hidden; padding: 10px; 
+        }
+
+        canvas { 
+            border: 2px solid #333; background: #000; border-radius: 4px;
+        }
+
+        .controls { 
+            height: 160px; 
+            width: 100%; display: grid; grid-template-areas: ". up ." "left down right"; gap: 8px;
+            padding: 10px 20px; flex-shrink: 0; background: #1a1a1a;
+        }
         .btn { 
-            width: 65px; height: 65px; background: #333; border: none; border-radius: 12px; 
-            color: white; font-size: 24px; display: flex; align-items: center; justify-content: center;
-            touch-action: manipulation;
+            width: 100%; height: 60px; 
+            background: #333; border: none; border-radius: 10px; 
+            color: white; font-size: 20px; display: flex; align-items: center; justify-content: center;
+            touch-action: manipulation; -webkit-tap-highlight-color: transparent;
         }
         .btn:active { background: #4CAF50; }
         .up { grid-area: up; } .left { grid-area: left; } .down { grid-area: down; } .right { grid-area: right; }
@@ -43,7 +60,9 @@
         <button class="exit-btn" id="saveBtn">ЗАВЕРШИТЬ</button>
     </div>
 
-    <canvas id="gameCanvas"></canvas>
+    <div id="game-wrapper">
+        <canvas id="gameCanvas"></canvas>
+    </div>
 
     <div class="controls">
         <button class="btn up" onclick="changeDir('up')">▲</button>
@@ -61,6 +80,7 @@
         const ctx = canvas.getContext("2d");
         const scoreElement = document.getElementById("scoreVal");
         const saveBtn = document.getElementById("saveBtn");
+        const wrapper = document.getElementById("game-wrapper");
         
         const gridSize = 20;
         let count = 0;
@@ -69,11 +89,26 @@
         let apple = { x: 320, y: 320 };
 
         function resizeCanvas() {
-            const availableWidth = window.innerWidth - 30;
-            const availableHeight = window.innerHeight - 300; 
-            canvas.width = Math.floor(availableWidth / gridSize) * gridSize;
-            canvas.height = Math.floor(availableHeight / gridSize) * gridSize;
+            const availableWidth = wrapper.clientWidth - 20;
+            const availableHeight = wrapper.clientHeight - 20;
+
+            const newWidth = Math.floor(availableWidth / gridSize) * gridSize;
+            const newHeight = Math.floor(availableHeight / gridSize) * gridSize;
+
+            if (canvas.width === newWidth && canvas.height === newHeight) return;
+
+            canvas.width = newWidth;
+            canvas.height = newHeight;
+
+            // Сброс позиции при ресайзе
+            snake.cells = []; 
+            snake.maxCells = 4;
+            snake.x = Math.floor((canvas.width / 2) / gridSize) * gridSize;
+            snake.y = Math.floor((canvas.height / 2) / gridSize) * gridSize;
+            placeApple(); 
         }
+
+        window.addEventListener('load', resizeCanvas);
         window.addEventListener('resize', resizeCanvas);
         resizeCanvas();
 
@@ -90,30 +125,21 @@
             if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
         }
 
-        // Функция завершения с принудительным закрытием
         function finishGame() {
-    const scoreStr = String(score || "0").trim();
-    
-    if (score > 0) {
-        try {
-            // Пробуем отправить данные. В личке это сработает ВСЕГДА.
-            tg.sendData(scoreStr);
-            
-            // Закрываем приложение через небольшую паузу
-            setTimeout(() => { tg.close(); }, 150);
-        } catch (err) {
-            // Если мы в группе, sendData выдаст ошибку. 
-            // ТОЛЬКО ТОГДА показываем алерт и просто закрываем.
-            console.error("Ошибка sendData (вероятно, это общий чат):", err);
-            alert("Игра окончена! Твой счёт: " + scoreStr + "\n(В группах счёт не сохраняется)");
-            tg.close();
+            const scoreStr = String(score || "0").trim();
+            if (score > 0) {
+                try {
+                    tg.sendData(scoreStr);
+                    setTimeout(() => { tg.close(); }, 150);
+                } catch (err) {
+                    alert("Игра окончена! Твой счёт: " + scoreStr + "\n(В группах счёт не сохраняется)");
+                    tg.close();
+                }
+            } else {
+                tg.close();
+            }
         }
-    } else {
-        tg.close();
-    }
-}
 
-        // Обработка кнопки
         saveBtn.onclick = finishGame;
         saveBtn.ontouchstart = (e) => {
             e.preventDefault();
@@ -129,7 +155,6 @@
             snake.x += snake.dx;
             snake.y += snake.dy;
 
-            // Сквозной проход через стены
             if (snake.x < 0) snake.x = canvas.width - gridSize;
             else if (snake.x >= canvas.width) snake.x = 0;
             if (snake.y < 0) snake.y = canvas.height - gridSize;
@@ -138,16 +163,13 @@
             snake.cells.unshift({x: snake.x, y: snake.y});
             if (snake.cells.length > snake.maxCells) snake.cells.pop();
 
-            // Рисуем яблоко
             ctx.fillStyle = '#ff4d4d';
             ctx.fillRect(apple.x, apple.y, gridSize-1, gridSize-1);
 
-            // Рисуем змейку
             ctx.fillStyle = '#4CAF50';
             snake.cells.forEach(function(cell, index) {
                 ctx.fillRect(cell.x, cell.y, gridSize-1, gridSize-1);
                 
-                // Проверка на яблоко
                 if (cell.x === apple.x && cell.y === apple.y) {
                     snake.maxCells++;
                     score++;
@@ -155,10 +177,8 @@
                     placeApple();
                 }
 
-                // Проверка столкновения с собой (начиная со второго сегмента)
                 for (let i = index + 1; i < snake.cells.length; i++) {
                     if (cell.x === snake.cells[i].x && cell.y === snake.cells[i].y) {
-                        // Вибрация при проигрыше
                         if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('error');
                         finishGame();
                     }
